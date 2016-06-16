@@ -24,6 +24,11 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="SBT: org.scala-lang:scala-library:2.11.8:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.mongodb.scala:mongo-scala-driver_2.11:1.1.1:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.mongodb.scala:mongo-scala-bson_2.11:1.1.1:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.mongodb:mongodb-driver-core:3.2.2:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.mongodb:mongodb-driver-async:3.2.2:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.mongodb:bson:3.2.2:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="SBT: org.specs2:specs2_2.11:2.3.12:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="SBT: org.specs2:classycle:1.4.3:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="SBT: org.scalaz:scalaz-effect_2.11:7.0.6:jar" level="project" />

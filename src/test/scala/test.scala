@@ -3,6 +3,7 @@ package candice.good.scala
   * Created by MIYAFENG1 on 2016/5/18.
   */
 
+import candice.good.scala.api.Weight
 import com.twitter.finagle.http.Status
 import com.twitter.finatra.http.test.EmbeddedHttpServer
 import com.twitter.inject.server.FeatureTest

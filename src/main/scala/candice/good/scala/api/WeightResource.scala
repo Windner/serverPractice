@@ -1,4 +1,4 @@
-package candice.good.scala
+package candice.good.scala.api
 
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.Controller
@@ -18,10 +18,11 @@ class WeightResource extends Controller with Logging {
 
   get("/weights") { request: Request =>
     info("finding all weights for all users...")
+
     db
   }
 
-  get("/weights/delete/:user") { request: Request =>
+  delete("/weights/:user") { request: Request =>
     info( s"""delete weight for user ${request.params("user")}""")
     val result = db.remove(request.params("user"))
     result match{
@@ -51,30 +52,6 @@ class WeightResource extends Controller with Logging {
     r
   }
 
-  post("/weights/update") { weight: Weight =>
-    info("post...")
-    val r = time(s"Total time take to post weight for user '${weight.user}' is %d ms") {
-      val weightsForUser = db.getOrElse(weight.user, List())
-      info(weightsForUser)
-      info(weight)
-      if (weightsForUser == weight)
-        info("same")
-      else
-      {
-        info("need to update")
-        db.remove(weight.user)
-        val newWeight = db.get(weight.user) match {
-          case Some(weights) => weights :+ weight
-          case None => List(weight)
-        }
-        db.put(weight.user, newWeight)
-      }
-
-      response.created.location(s"/weights/${weight.user}")
-
-    }
-    r
-  }
 }
 
 case class Weight(

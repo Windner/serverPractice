@@ -1,5 +1,6 @@
 package candice.good.scala
 
+import candice.good.scala.api.BookRecord
 import com.twitter.finatra.http.HttpServer
 import com.twitter.finatra.http.routing.HttpRouter
 
@@ -11,8 +12,6 @@ object AAA extends AAAServer
 class AAAServer extends HttpServer
 {
   override protected def configureHttp(router: HttpRouter): Unit = {
-    router.add(new HelloController)
-    router.add(new WeightResource)
-    router.add(new ExampleController)
+    router.add(new BookRecord)
   }
 }
