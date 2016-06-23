@@ -12,6 +12,7 @@ object AAA extends AAAServer
 class AAAServer extends HttpServer
 {
   override protected def configureHttp(router: HttpRouter): Unit = {
+
     router.add(new BookRecord)
   }
 }

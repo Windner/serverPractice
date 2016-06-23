@@ -43,5 +43,9 @@ libraryDependencies += "com.twitter.inject" % "inject-modules_2.11" % versions.f
 libraryDependencies += "com.google.inject.extensions" % "guice-testlib" % versions.guice % "test" classifier "tests"
 libraryDependencies +=  "com.twitter.finatra" % "finatra-jackson_2.11" % versions.finatra % "test"  classifier "tests"
 
+// http://mvnrepository.com/artifact/com.google.code.gson/gson
+libraryDependencies += "com.google.code.gson" % "gson" % "2.6.2"
+
+
 libraryDependencies += "org.scalatest" %% "scalatest" % versions.scalatest % "test"
 libraryDependencies += "org.specs2" %% "specs2" % versions.specs2 % "test"
