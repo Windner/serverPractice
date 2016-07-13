@@ -4,25 +4,27 @@ package candice.good.scala.mongodb
   * Created by MIYAFENG1 on 2016/6/14.
   */
 
+import java.util.NoSuchElementException
 import java.util.concurrent.TimeUnit
 
 import candice.good.scala.api.Book
 import com.twitter.inject.Logging
+import com.typesafe.config.ConfigFactory
 import org.bson.BsonDocumentWriter
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Projections._
-import org.mongodb.scala.model.Updates._
 import org.mongodb.scala._
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.UpdateOptions
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class MongodbManager private extends Logging{
+
+object MongodbManager extends Logging{
 
   //define
-  val MONGODB_URI = "mongodb://localhost"
+  //val MONGODB_URI = "mongodb://localhost"
   val MONGODB_NAME = "db"
   val MONGODB_COLLECTION_NAME = "BookRecord"
 
@@ -33,109 +35,111 @@ class MongodbManager private extends Logging{
   val KEY_NAME = "name"
   val KEY_AUTHOR = "author"
 
+  //load configure file
+  // TODO: need to new a class to handle
+  val mongodbConf = ConfigFactory.load
+  val root = mongodbConf.getConfig("mongodb")
+
+  val MONGODB_ADDRESS = root.getString("hostAddress")
+  val MONGODB_PORT = root.getString("hostPort")
+
   // Use a Connection String
-  val mongoClient: MongoClient = MongoClient(MONGODB_URI)
+  val mongoClient: MongoClient = MongoClient(s"mongodb://${MONGODB_ADDRESS}:${MONGODB_PORT}")
   val database: MongoDatabase = mongoClient.getDatabase(MONGODB_NAME)
   // collection == table
   val collection: MongoCollection[Document] = database.getCollection(MONGODB_COLLECTION_NAME);
 
+  //TODO: test index: list Index
+  //collection.createIndex(compoundIndex(ascending("x"), descending("y"))) => TODO:what dose this do?
+  collection.createIndex(Document(KEY_ISBN -> 1))
+
   //get
-  def query (key: String, value: String) : Document = {
-    val returnDoc:Document = try {
-      val queryFuture = collection.find(equal(key, value)).projection(excludeId()).toFuture()
-      Await.result(queryFuture, Duration(10, TimeUnit.SECONDS)).head
+  def query (key: String, value: String) : Future[Document] = (for {
+    queryFuture <- collection.find(equal(key, value)).projection(excludeId()).toFuture()
+  } yield queryFuture.head)
+    .recover {
+      case e:NoSuchElementException => throw new NoSuchElementException(e.getMessage)
+      case e:Exception => {
+        println(e.getMessage)
+        throw new Exception(e)
+      }
+        Document.empty
     }
-    catch {
-      case e: Exception =>
-        println(e.toString)
-        null
-    }
-    returnDoc
-  }
 
   //create
-  def create (document: Document): Boolean = {
-    val createResult =
-      try {
-        val insertFuture = collection.insertOne(document).toFuture()
-        Await.result(insertFuture, Duration(DEFAULT_AWAIT_TIMEOUT, DEFAULT_AWAIT_TIME_UNIT))
-        true
-      }
-    catch {
-      case ex: Exception => {
-        println(ex.getMessage)
-      }
-        false
+  def create (document: Document): Future[Boolean] = ( for {
+    //TODO: validate document format, can't be empty document
+        insertFuture <- collection.insertOne(document).toFuture()
+        list <- collection.listIndexes().toFuture()
+      } yield {
+      list.foreach(doc => println(doc))
+
+      true}).recover {
+    case ex:DuplicateKeyException =>throw new Exception(ex)
+    case ex: Exception => {
+      println(ex.getMessage)
+      throw new Exception(ex)
+      false
     }
-    createResult
   }
 
-  //update
-  def update (value: String, document: Document): Boolean = {
-    val actionResult =
-      try {
-        val updateOpts = (new UpdateOptions()).upsert(true)
-        val updateFuture = collection.replaceOne(equal(KEY_ISBN,value), document, updateOpts).toFuture()
-        Await.result(updateFuture,  Duration(DEFAULT_AWAIT_TIMEOUT, DEFAULT_AWAIT_TIME_UNIT))
-        true
-      }
-    catch {
-        case ex: Exception => {
+  val updateOpts = (new UpdateOptions()).upsert(true)
+  //update(replace)
+  def update (value: String, document: Document): Future[Boolean] = (for {
+        updateFuture <- collection.replaceOne(equal(KEY_ISBN,value), document, updateOpts).toFuture()
+      } yield true).recover {
+          case ex: Exception => {
           println(ex.getMessage)
         }
         false
     }
-        actionResult
-  }
 
   //update partial
-  def patch (updates: BsonDocument, id:String): String = {
-    val actionResult =
-      try {
-        val updateFuture = collection.findOneAndUpdate(equal(KEY_ISBN, id), updates).toFuture() // Not found: return null
-        //val updateFuture = collection.updateOne(equal(KEY_ISBN, id), updates).toFuture() //Not found: return result
-        Await.result(updateFuture,Duration(DEFAULT_AWAIT_TIMEOUT, DEFAULT_AWAIT_TIME_UNIT)).head.toString()
-      }
-      catch {
-        case ex: Exception => {
-        println (ex.getMessage)
-        "Update fail"
-          }
-      }
-    actionResult
+  def patch (updates: BsonDocument, id:String): Future[Boolean] = (for {
+      updateFuture <- collection.findOneAndUpdate(equal(KEY_ISBN, id), updates).toFuture() // Not found: return null
+  } yield {
+    true
+  }).recover {
+    case ex: Exception => {
+      println(ex.getMessage)
+      throw new Exception(ex)
+      false
+    }
   }
 
   //delete
-  def delete (key: String, value: String): Boolean = {
-    val actionResult =
-      try {
-        val deleteFuture = collection.deleteOne(equal(key,value)).toFuture()
-        val deleteCount = Await.result(deleteFuture,  Duration(DEFAULT_AWAIT_TIMEOUT, DEFAULT_AWAIT_TIME_UNIT)).head.getDeletedCount
-        if (deleteCount > 0) true else false
-      }
-    catch {
-        case ex: Exception => {
-          println(ex.getMessage)
-        }
-        false
+  def delete (key: String, value: String): Future[Boolean] = (for {
+    deleteFuture <- collection.deleteOne(equal(key, value)).toFuture()
+  } yield {
+    if ( deleteFuture.head.getDeletedCount > 0 ) true else false
+  }).recover {
+    case ex: Exception => {
+      println(ex.getMessage)
+      throw new Exception(ex)
+      false
     }
-      actionResult
   }
 
   //show
-  def show : List[Document] = {
-    val queryFuture = collection.find().projection(excludeId()).toFuture()
-    Await.result(queryFuture, Duration(DEFAULT_AWAIT_TIMEOUT, DEFAULT_AWAIT_TIME_UNIT)).toList
+  def show : Future[List[Document]] = (for {
+    queryFuture <- collection.find().projection(excludeId()).toFuture()
+
+  } yield {
+    //queryFuture.toList.foreach(data =>println(data.toJson().toString))
+    queryFuture.toList
+  }).recover {
+    case e:Exception => println(e.getMessage)
+      Nil
   }
 
   //clean collection
-  def clean: Unit = {
+  def clean: Unit = Future {
     info("mongodb drop collection")
-    Await.result(collection.drop().toFuture(), Duration(DEFAULT_AWAIT_TIMEOUT, DEFAULT_AWAIT_TIME_UNIT))
+    collection.drop()
   }
 
   //close
-  def close: Unit = {
+  def close: Unit = Future {
     mongoClient.close()
   }
 
@@ -148,16 +152,10 @@ class MongodbManager private extends Logging{
       KEY_AUTHOR -> book.author)
   }
 
-  //util
-  def getDocFromUpdateElement(updateElement: UpdateElement): Document = {
-    Document(
-      "KEY" -> updateElement.KEY,
-      "VALUE" -> updateElement.VALUE
-    )
-  }
 
   //JAVA, reference: AbstractBsonWriter.java
-  def getUpdateStrFromBook(book: Book): BsonDocument = {
+  //TODO: new a file to handle all operations
+  def getUpdateStrFromBook(book: Book): Future[BsonDocument] = Future {
     info("get update string")
     val writer: BsonDocumentWriter = new BsonDocumentWriter(new BsonDocument)
 
@@ -195,13 +193,10 @@ class MongodbManager private extends Logging{
   }
 }
 
-case class UpdateElement (
-  KEY: String,
-  VALUE: String
-  )
-
+/*
 object MongodbManager {
   private val mongodbManager = new MongodbManager
 
   def apply() = mongodbManager
 }
+*/

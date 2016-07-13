@@ -12,6 +12,7 @@ lazy val versions = new {
   val specs2 = "2.3.12"
   val scalatest = "2.2.6"
   val mongodb = "1.1.1"
+  val bijection = "0.9.2"
 }
 
 resolvers ++= Seq(
@@ -21,6 +22,9 @@ resolvers ++= Seq(
 
 libraryDependencies += "com.twitter.finatra" % "finatra-http_2.11" % versions.finatra
 libraryDependencies += "com.twitter.finatra" % "finatra-slf4j_2.11" % versions.finatra
+libraryDependencies += "com.twitter" % "bijection-core_2.11" % versions.bijection
+libraryDependencies += "com.twitter" % "bijection-util_2.11" % versions.bijection
+libraryDependencies += "com.typesafe" % "config" % "1.2.1" //for configure file
 libraryDependencies += "ch.qos.logback" % "logback-classic" % versions.logback
 libraryDependencies += "org.mongodb.scala" %% "mongo-scala-driver" % versions.mongodb
 
@@ -49,3 +53,5 @@ libraryDependencies += "com.google.code.gson" % "gson" % "2.6.2"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % versions.scalatest % "test"
 libraryDependencies += "org.specs2" %% "specs2" % versions.specs2 % "test"
+
+unmanagedClasspath in Runtime += baseDirectory.value / "conf"
